@@ -6,3 +6,4 @@
 #pragma once
 
 #include "gtest/gtest.h"
+#include "../FastIndexer/fastIndexer.h"

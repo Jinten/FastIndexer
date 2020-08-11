@@ -4,4 +4,7 @@
     <ClInclude Include="fastIndexer.h" />
     <ClInclude Include="typeAlias.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="fastIndexer.cpp" />
+  </ItemGroup>
 </Project>
