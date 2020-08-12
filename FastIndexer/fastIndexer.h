@@ -9,7 +9,7 @@ namespace ao
 	class FastIndexer
 	{
 	public:
-		FastIndexer(u32 exponent) : mExponent(exponent), mElementCount(64 << (exponent * 6))
+		FastIndexer(u32 exponent) : mExponent(exponent), mElementCount(64 << (exponent * 6)), mTerminateExponent(exponent == 0 ? 0 : exponent - 1)
 		{
 			mBuffer = new u64[mElementCount];
 
@@ -41,6 +41,7 @@ namespace ao
 
 	private:
 		u32 mExponent;
+		u32 mTerminateExponent;
 		u32 mElementCount;
 		u64* mBuffer;
 
@@ -64,7 +65,7 @@ namespace ao
 					return false;
 				}
 
-				if (expIndex == mExponent)
+				if (expIndex == mTerminateExponent)
 				{
 					destIndex = bitScanForward(src);
 					const u64 dest = src & (~(1 << destIndex)); // create the mask.
@@ -88,13 +89,13 @@ namespace ao
 					destIndex = bitScanForward(src);
 
 					u64 index;
-					const u64 ofsBinIndex = 1 + expIndex == 0 ? 0 : (64 << (6 * expIndex));
+					const u64 ofsBinIndex = u64(1) + (expIndex == 0 ? 0 : (64 << (6 * (expIndex - 1))));
 					const u64 baseBinIndex = ofsBinIndex + 64 * destIndex;
 
 					const bool result = reserveInternal(index, expIndex + 1, baseBinIndex);
 					if (result)
 					{
-						destIndex = (destIndex << (6 * (mExponent - expIndex))) + index;
+						destIndex = (destIndex << (6 * (mTerminateExponent - expIndex))) + index;
 
 						return true;
 					}
@@ -123,7 +124,7 @@ namespace ao
 			while (true)
 			{
 				u64 src = mBuffer[binIndex];
-				if (expIndex == mExponent)
+				if (expIndex == mTerminateExponent)
 				{
 					const u64 dest = src | (u64(1) << (index % 64));
 					const u64 result = InterlockedCompareExchange64((long long*)&mBuffer[binIndex], dest, src);
@@ -140,7 +141,7 @@ namespace ao
 				{
 					const u64 ofsBinIndex = expIndex == 0 ? 0 : (1 << (6 * expIndex));
 					const u64 nextBinIndex = expIndex == 0 ? 0 : index / ofsBinIndex;
-					
+
 					releaseInternal(index, expIndex + 1, nextBinIndex + 1);
 
 					while (true)
