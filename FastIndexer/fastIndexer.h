@@ -28,14 +28,14 @@ namespace ao
 			delete[] mBuffer;
 		}
 
-		u32 reserve()
+		u32 assign()
 		{
 			u64 dest;
 			ResultType result = ResultType::Invalid;
 
 			while (true)
 			{
-				result = reserveInternal(dest, 0, 0, 1);
+				result = assignInternal(dest, 0, 0, 1);
 				if (result == ResultType::Success || result == ResultType::Full)
 				{
 					break;
@@ -83,7 +83,7 @@ namespace ao
 			return result;
 		}
 
-		ResultType reserveInternal(u64& destIndex, const u64 expIndex, const u64 bufIndex, const  u64 bufOffset)
+		ResultType assignInternal(u64& destIndex, const u64 expIndex, const u64 bufIndex, const  u64 bufOffset)
 		{
 			while (true)
 			{
@@ -126,7 +126,7 @@ namespace ao
 					const u64 nextBufOffset = (u64(64) << (6 * expIndex)) * (destIndex + 1);
 
 					u64 index;
-					const ResultType result = reserveInternal(index, expIndex + 1, nextBufIndex, bufOffset + nextBufOffset);
+					const ResultType result = assignInternal(index, expIndex + 1, nextBufIndex, bufOffset + nextBufOffset);
 
 					switch (result)
 					{

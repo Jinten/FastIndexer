@@ -2,9 +2,9 @@
 
 using namespace ao;
 
-static constexpr u32 MaxExponent = 5;
+static constexpr u32 MaxExponent = 4;
 
-bool reserveTestInternal(const u32 n)
+bool assignTestInternal(const u32 n)
 {
 	const u32 init = (u32)(std::log(n) / std::log(64)) - 1;
 
@@ -15,10 +15,10 @@ bool reserveTestInternal(const u32 n)
 
 		for (u32 j = 0; j < n; ++j)
 		{
-			const u32 index = indexer.reserve();
+			const u32 index = indexer.assign();
 			if (index != j)
 			{
-				std::cout << "reserved index is " << index << ", " << "correct index is " << j << std::endl;
+				std::cout << "assignd index is " << index << ", " << "correct index is " << j << std::endl;
 				return false;
 			}
 		}
@@ -27,29 +27,35 @@ bool reserveTestInternal(const u32 n)
 	return true;
 }
 
-bool reserve64Test()
+bool assign64Test()
 {
-	return reserveTestInternal(64);
+	return assignTestInternal(64);
 }
 
-bool reserve4096Test()
+bool assign4096Test()
 {
-	return reserveTestInternal(4096);
+	return assignTestInternal(4096);
 }
 
-bool reserve262144Test()
+bool assign262144Test()
 {
-	return reserveTestInternal(262144);
+	return assignTestInternal(262144);
 }
 
-bool reserve16777216Test()
+bool assign16777216Test()
 {
-	return reserveTestInternal(16777216);
+	return assignTestInternal(16777216);
 }
 
-bool reserve1073741824Test()
+bool assign1073741824Test()
 {
-	return reserveTestInternal(1073741824);
+	if (MaxExponent < 5)
+	{
+		std::cout << "MaxExponent requires as setting of 5 or higher. MaxExponent = " << MaxExponent << std::endl;
+		return false;
+	}
+
+	return assignTestInternal(1073741824);
 }
 
 bool releaseSimpleTest()
@@ -59,10 +65,10 @@ bool releaseSimpleTest()
 		FastIndexer indexer(i);
 		std::cout << "exponent = " << i << ", size = " << sizeof(indexer) + indexer.size() << std::endl;
 
-		const u32 index = indexer.reserve();
+		const u32 index = indexer.assign();
 		if (index != 0)
 		{
-			std::cout << "reserved index is " << index << ", " << "correct index is " << 0 << std::endl;
+			std::cout << "assignd index is " << index << ", " << "correct index is " << 0 << std::endl;
 			return false;
 		}
 
@@ -83,7 +89,7 @@ bool releaseTestInternal(const u32 n)
 
 		for (u32 j = 0; j < n; ++j)
 		{
-			indexer.reserve();
+			indexer.assign();
 		}
 
 		for (u32 j = 0; j < n; ++j)
@@ -91,10 +97,10 @@ bool releaseTestInternal(const u32 n)
 			indexer.release(j);
 		}
 
-		const u32 index = indexer.reserve();
+		const u32 index = indexer.assign();
 		if (index != 0)
 		{
-			std::cout << "reserved index is " << index << ", " << "correct index is " << 0 << std::endl;
+			std::cout << "assignd index is " << index << ", " << "correct index is " << 0 << std::endl;
 			return false;
 		}
 	}
@@ -124,10 +130,15 @@ bool release16777216Test()
 
 bool release1073741824Test()
 {
+	if (MaxExponent < 5)
+	{
+		std::cout << "MaxExponent requires as setting of 5 or higher. MaxExponent = " << MaxExponent << std::endl;
+		return false;
+	}
 	return releaseTestInternal(1073741824);
 }
 
-bool evenReserveTestInternal(const u32 n)
+bool evenAssignTestInternal(const u32 n)
 {
 	const u32 init = (u32)(std::log(n) / std::log(64)) - 1;
 
@@ -138,7 +149,7 @@ bool evenReserveTestInternal(const u32 n)
 
 		for (u32 j = 0; j < n; ++j)
 		{
-			indexer.reserve();
+			indexer.assign();
 		}
 
 		for (u32 j = 0; j < n; ++j)
@@ -152,10 +163,10 @@ bool evenReserveTestInternal(const u32 n)
 		const u32 half_n = n >> 1;
 		for (u32 j = 0; j < half_n; ++j)
 		{
-			const u32 index = indexer.reserve();
+			const u32 index = indexer.assign();
 			if (index != (j << 1))
 			{
-				std::cout << "reserved index is " << index << ", " << "correct index is " << (j << 1) << std::endl;
+				std::cout << "assignd index is " << index << ", " << "correct index is " << (j << 1) << std::endl;
 				return false;
 			}
 		}
@@ -164,32 +175,37 @@ bool evenReserveTestInternal(const u32 n)
 	return true;
 }
 
-bool evenReserve64Test()
+bool evenAssign64Test()
 {
-	return evenReserveTestInternal(64);
+	return evenAssignTestInternal(64);
 }
 
-bool evenReserve4096Test()
+bool evenAssign4096Test()
 {
-	return evenReserveTestInternal(4096);
+	return evenAssignTestInternal(4096);
 }
 
-bool evenReserve262144Test()
+bool evenAssign262144Test()
 {
-	return evenReserveTestInternal(262144);
+	return evenAssignTestInternal(262144);
 }
 
-bool evenReserve16777216Test()
+bool evenAssign16777216Test()
 {
-	return evenReserveTestInternal(16777216);
+	return evenAssignTestInternal(16777216);
 }
 
-bool evenReserve1073741824Test()
+bool evenAssign1073741824Test()
 {
-	return evenReserveTestInternal(1073741824);
+	if (MaxExponent < 5)
+	{
+		std::cout << "MaxExponent requires as setting of 5 or higher. MaxExponent = " << MaxExponent << std::endl;
+		return false;
+	}
+	return evenAssignTestInternal(1073741824);
 }
 
-bool oddReserveTestInternal(const u32 n)
+bool oddAssignTestInternal(const u32 n)
 {
 	const u32 init = (u32)(std::log(n) / std::log(64)) - 1;
 
@@ -200,7 +216,7 @@ bool oddReserveTestInternal(const u32 n)
 
 		for (u32 j = 0; j < n; ++j)
 		{
-			indexer.reserve();
+			indexer.assign();
 		}
 
 		for (u32 j = 0; j < n; ++j)
@@ -214,10 +230,10 @@ bool oddReserveTestInternal(const u32 n)
 		const u32 half_n = n >> 1;
 		for (u32 j = 0; j < half_n; ++j)
 		{
-			const u32 index = indexer.reserve();
+			const u32 index = indexer.assign();
 			if (index != ((j << 1) + 1))
 			{
-				std::cout << "reserved index is " << index << ", " << "correct index is " << ((j << 1) + 1) << std::endl;
+				std::cout << "assignd index is " << index << ", " << "correct index is " << ((j << 1) + 1) << std::endl;
 				return false;
 			}
 		}
@@ -226,29 +242,34 @@ bool oddReserveTestInternal(const u32 n)
 	return true;
 }
 
-bool oddReserve64Test()
+bool oddAssign64Test()
 {
-	return oddReserveTestInternal(64);
+	return oddAssignTestInternal(64);
 }
 
-bool oddReserve4096Test()
+bool oddAssign4096Test()
 {
-	return oddReserveTestInternal(4096);
+	return oddAssignTestInternal(4096);
 }
 
-bool oddReserve262144Test()
+bool oddAssign262144Test()
 {
-	return oddReserveTestInternal(262144);
+	return oddAssignTestInternal(262144);
 }
 
-bool oddReserve16777216Test()
+bool oddAssign16777216Test()
 {
-	return oddReserveTestInternal(16777216);
+	return oddAssignTestInternal(16777216);
 }
 
-bool oddReserve1073741824Test()
+bool oddAssign1073741824Test()
 {
-	return oddReserveTestInternal(1073741824);
+	if (MaxExponent < 5)
+	{
+		std::cout << "MaxExponent requires as setting of 5 or higher. MaxExponent = " << MaxExponent << std::endl;
+		return false;
+	}
+	return oddAssignTestInternal(1073741824);
 }
 
 bool randomTestInternal(const u32 n)
@@ -262,7 +283,7 @@ bool randomTestInternal(const u32 n)
 
 		for (u32 j = 0; j < n; ++j)
 		{
-			indexer.reserve();
+			indexer.assign();
 		}
 
 		const u32 n_rand = max(1, rand() % min(n, 20000000));
@@ -287,10 +308,10 @@ bool randomTestInternal(const u32 n)
 
 		for (u32 j = 0; j < indexCount; ++j)
 		{
-			const u32 index = indexer.reserve();
+			const u32 index = indexer.assign();
 			if (index != indexes[j])
 			{
-				std::cout << "reserved index is " << index << ", " << "correct index is " << indexes[j] << std::endl;
+				std::cout << "assignd index is " << index << ", " << "correct index is " << indexes[j] << std::endl;
 				return false;
 			}
 		}
@@ -323,135 +344,140 @@ bool random16777216Test()
 
 bool random1073741824Test()
 {
+	if (MaxExponent < 5)
+	{
+		std::cout << "MaxExponent requires as setting of 5 or higher. MaxExponent = " << MaxExponent << std::endl;
+		return false;
+	}
 	return randomTestInternal(1073741824);
 }
 
-TEST(BasicUseCaseTest, Reserve64Test) {
-	EXPECT_EQ(true, reserve64Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, Assign64Test) 
+{
+	EXPECT_EQ(true, assign64Test());
 }
 
-TEST(BasicUseCaseTest, Reserve4096Test) {
-	EXPECT_EQ(true, reserve4096Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, Assign4096Test) 
+{
+	EXPECT_EQ(true, assign4096Test());
 }
 
-TEST(BasicUseCaseTest, Reserve262144Test) {
-	EXPECT_EQ(true, reserve262144Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, Assign262144Test) 
+{
+	EXPECT_EQ(true, assign262144Test());
 }
 
-TEST(BasicUseCaseTest, Reserve16777216Test) {
-	EXPECT_EQ(true, reserve16777216Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, Assign16777216Test) 
+{
+	EXPECT_EQ(true, assign16777216Test());
 }
 
-TEST(BasicUseCaseTest, Reserve1073741824Test) {
-	EXPECT_EQ(true, reserve1073741824Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, Assign1073741824Test)
+{
+	EXPECT_EQ(true, assign1073741824Test());
 }
 
-TEST(BasicUseCaseTest, ReleaseSimpleTest) {
+TEST(BasicUseCaseTest, ReleaseSimpleTest)
+{
 	EXPECT_EQ(true, releaseSimpleTest());
-	EXPECT_TRUE(true);
 }
 
-TEST(BasicUseCaseTest, Release64Test) {
+TEST(BasicUseCaseTest, Release64Test)
+{
 	EXPECT_EQ(true, release64Test());
-	EXPECT_TRUE(true);
 }
 
-TEST(BasicUseCaseTest, Release4096Test) {
+TEST(BasicUseCaseTest, Release4096Test)
+{
 	EXPECT_EQ(true, release4096Test());
-	EXPECT_TRUE(true);
 }
 
-TEST(BasicUseCaseTest, Release262144Test) {
+TEST(BasicUseCaseTest, Release262144Test)
+{
 	EXPECT_EQ(true, release262144Test());
-	EXPECT_TRUE(true);
 }
 
-TEST(BasicUseCaseTest, Release16777216Test) {
+TEST(BasicUseCaseTest, Release16777216Test)
+{
 	EXPECT_EQ(true, release16777216Test());
-	EXPECT_TRUE(true);
 }
 
-TEST(BasicUseCaseTest, Release1073741824Test) {
+TEST(BasicUseCaseTest, Release1073741824Test)
+{
 	EXPECT_EQ(true, release1073741824Test());
-	EXPECT_TRUE(true);
 }
 
-TEST(BasicUseCaseTest, EvenReserve64Test) {
-	EXPECT_EQ(true, evenReserve64Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, EvenAssign64Test)
+{
+	EXPECT_EQ(true, evenAssign64Test());
 }
 
-TEST(BasicUseCaseTest, EvenReserve4096Test) {
-	EXPECT_EQ(true, evenReserve4096Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, EvenAssign4096Test)
+{
+	EXPECT_EQ(true, evenAssign4096Test());
 }
 
-TEST(BasicUseCaseTest, EvenReserve262144Test) {
-	EXPECT_EQ(true, evenReserve262144Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, EvenAssign262144Test)
+{
+	EXPECT_EQ(true, evenAssign262144Test());
 }
 
-TEST(BasicUseCaseTest, EvenReserve16777216Test) {
-	EXPECT_EQ(true, evenReserve16777216Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, EvenAssign16777216Test)
+{
+	EXPECT_EQ(true, evenAssign16777216Test());
 }
 
-TEST(BasicUseCaseTest, EvenReserve1073741824Test) {
-	EXPECT_EQ(true, evenReserve1073741824Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, EvenAssign1073741824Test)
+{
+	EXPECT_EQ(true, evenAssign1073741824Test());
 }
 
-TEST(BasicUseCaseTest, OddReserve64Test) {
-	EXPECT_EQ(true, oddReserve64Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, OddAssign64Test)
+{
+	EXPECT_EQ(true, oddAssign64Test());
 }
 
-TEST(BasicUseCaseTest, OddReserve4096Test) {
-	EXPECT_EQ(true, oddReserve4096Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, OddAssign4096Test)
+{
+	EXPECT_EQ(true, oddAssign4096Test());
 }
 
-TEST(BasicUseCaseTest, OddReserve262144Test) {
-	EXPECT_EQ(true, oddReserve262144Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, OddAssign262144Test)
+{
+	EXPECT_EQ(true, oddAssign262144Test());
 }
 
-TEST(BasicUseCaseTest, OddReserve16777216Test) {
-	EXPECT_EQ(true, oddReserve16777216Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, OddAssign16777216Test)
+{
+	EXPECT_EQ(true, oddAssign16777216Test());
 }
 
-TEST(BasicUseCaseTest, OddReserve1073741824Test) {
-	EXPECT_EQ(true, oddReserve1073741824Test());
-	EXPECT_TRUE(true);
+TEST(BasicUseCaseTest, OddAssign1073741824Test)
+{
+	EXPECT_EQ(true, oddAssign1073741824Test());
 }
 
-TEST(BasicUseCaseTest, Random64Test) {
+TEST(BasicUseCaseTest, Random64Test)
+{
 	EXPECT_EQ(true, random64Test());
-	EXPECT_TRUE(true);
 }
 
-TEST(BasicUseCaseTest, Random4096Test) {
+TEST(BasicUseCaseTest, Random4096Test)
+{
 	EXPECT_EQ(true, random4096Test());
-	EXPECT_TRUE(true);
 }
 
-TEST(BasicUseCaseTest, Random262144Test) {
+TEST(BasicUseCaseTest, Random262144Test)
+{
 	EXPECT_EQ(true, random262144Test());
-	EXPECT_TRUE(true);
 }
 
-TEST(BasicUseCaseTest, Random16777216Test) {
+TEST(BasicUseCaseTest, Random16777216Test)
+{
 	EXPECT_EQ(true, random16777216Test());
-	EXPECT_TRUE(true);
 }
 
-TEST(BasicUseCaseTest, Random1073741824Test) {
+TEST(BasicUseCaseTest, Random1073741824Test)
+{
 	EXPECT_EQ(true, random1073741824Test());
-	EXPECT_TRUE(true);
 }
