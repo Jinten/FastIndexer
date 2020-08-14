@@ -10,11 +10,17 @@ namespace ao
 	class FastIndexer
 	{
 	public:
-		FastIndexer(u32 exponent) : mExponent(exponent), mElementCount(64 << (exponent * 6))
+		FastIndexer(u32 exponent) : mExponent(exponent)
 		{
+			mElementCount = 1;
+			for (u32 i = 0; i < exponent; ++i)
+			{
+				mElementCount += 1 << (6 * exponent);
+			}
+
 			mBuffer = new u64[mElementCount];
 
-			std::fill(mBuffer, &mBuffer[mElementCount - 1], u64Max);
+			std::fill(mBuffer, &mBuffer[mElementCount], u64Max);
 		}
 
 		~FastIndexer()
@@ -44,6 +50,11 @@ namespace ao
 		void release(u32 index)
 		{
 			releaseInternal(u64(index), 0, 0, 1);
+		}
+
+		u64 size()
+		{
+			return sizeof(u64) * mElementCount;
 		}
 
 	private:

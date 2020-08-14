@@ -10,12 +10,12 @@ bool reserveTestInternal(const u32 n)
 
 	for (u32 i = init; i < MaxExponent; ++i)
 	{
-		u32 index = 0xFFFFFFFF;
 		FastIndexer indexer(i);
+		std::cout << "exponent = " << i << ", size = " << sizeof(indexer) + indexer.size() << std::endl;
 
-		for (u32 j = 0; j < 64; ++j)
+		for (u32 j = 0; j < n; ++j)
 		{
-			index = indexer.reserve();
+			const u32 index = indexer.reserve();
 			if (index != j)
 			{
 				std::cout << "reserved index is " << index << ", " << "correct index is " << j << std::endl;
@@ -56,10 +56,10 @@ bool releaseSimpleTest()
 {
 	for (u32 i = 0; i < MaxExponent; ++i)
 	{
-		u32 index = 0xFFFFFFFF;
 		FastIndexer indexer(i);
+		std::cout << "exponent = " << i << ", size = " << sizeof(indexer) + indexer.size() << std::endl;
 
-		index = indexer.reserve();
+		const u32 index = indexer.reserve();
 		if (index != 0)
 		{
 			std::cout << "reserved index is " << index << ", " << "correct index is " << 0 << std::endl;
@@ -78,12 +78,12 @@ bool releaseTestInternal(const u32 n)
 
 	for (u32 i = init; i < MaxExponent; ++i)
 	{
-		u32 index = 0xFFFFFFFF;
 		FastIndexer indexer(i);
+		std::cout << "exponent = " << i << ", size = " << sizeof(indexer) + indexer.size() << std::endl;
 
 		for (u32 j = 0; j < n; ++j)
 		{
-			index = indexer.reserve();
+			indexer.reserve();
 		}
 
 		for (u32 j = 0; j < n; ++j)
@@ -91,7 +91,7 @@ bool releaseTestInternal(const u32 n)
 			indexer.release(j);
 		}
 
-		index = indexer.reserve();
+		const u32 index = indexer.reserve();
 		if (index != 0)
 		{
 			std::cout << "reserved index is " << index << ", " << "correct index is " << 0 << std::endl;
@@ -133,12 +133,12 @@ bool evenReserveTestInternal(const u32 n)
 
 	for (u32 i = init; i < MaxExponent; ++i)
 	{
-		u32 index = 0xFFFFFFFF;
 		FastIndexer indexer(i);
+		std::cout << "exponent = " << i << ", size = " << sizeof(indexer) + indexer.size() << std::endl;
 
 		for (u32 j = 0; j < n; ++j)
 		{
-			index = indexer.reserve();
+			indexer.reserve();
 		}
 
 		for (u32 j = 0; j < n; ++j)
@@ -152,7 +152,7 @@ bool evenReserveTestInternal(const u32 n)
 		const u32 half_n = n >> 1;
 		for (u32 j = 0; j < half_n; ++j)
 		{
-			index = indexer.reserve();
+			const u32 index = indexer.reserve();
 			if (index != (j << 1))
 			{
 				std::cout << "reserved index is " << index << ", " << "correct index is " << (j << 1) << std::endl;
@@ -195,12 +195,12 @@ bool oddReserveTestInternal(const u32 n)
 
 	for (u32 i = init; i < MaxExponent; ++i)
 	{
-		u32 index = 0xFFFFFFFF;
 		FastIndexer indexer(i);
+		std::cout << "exponent = " << i << ", size = " << sizeof(indexer) + indexer.size() << std::endl;
 
 		for (u32 j = 0; j < n; ++j)
 		{
-			index = indexer.reserve();
+			indexer.reserve();
 		}
 
 		for (u32 j = 0; j < n; ++j)
@@ -214,7 +214,7 @@ bool oddReserveTestInternal(const u32 n)
 		const u32 half_n = n >> 1;
 		for (u32 j = 0; j < half_n; ++j)
 		{
-			index = indexer.reserve();
+			const u32 index = indexer.reserve();
 			if (index != ((j << 1) + 1))
 			{
 				std::cout << "reserved index is " << index << ", " << "correct index is " << ((j << 1) + 1) << std::endl;
@@ -249,6 +249,81 @@ bool oddReserve16777216Test()
 bool oddReserve1073741824Test()
 {
 	return oddReserveTestInternal(1073741824);
+}
+
+bool randomTestInternal(const u32 n)
+{
+	const u32 init = (u32)(std::log(n) / std::log(64)) - 1;
+
+	for (u32 i = init; i < MaxExponent; ++i)
+	{
+		FastIndexer indexer(i);
+		std::cout << "exponent = " << i << ", size = " << sizeof(indexer) + indexer.size() << std::endl;
+
+		for (u32 j = 0; j < n; ++j)
+		{
+			indexer.reserve();
+		}
+
+		const u32 n_rand = max(1, rand() % min(n, 20000000));
+
+		u32 indexCount = 0;
+		u64* indexes = new u64[n_rand];
+
+		for (u32 j = 0; j < n; ++j)
+		{
+			if (rand() % 3 == 0)
+			{
+				indexes[indexCount] = j;
+				indexer.release(j);
+
+				++indexCount;
+				if (indexCount == n_rand)
+				{
+					break;
+				}
+			}
+		}
+
+		for (u32 j = 0; j < indexCount; ++j)
+		{
+			const u32 index = indexer.reserve();
+			if (index != indexes[j])
+			{
+				std::cout << "reserved index is " << index << ", " << "correct index is " << indexes[j] << std::endl;
+				return false;
+			}
+		}
+
+		delete[] indexes;
+	}
+
+	return true;
+}
+
+bool random64Test()
+{
+	return randomTestInternal(64);
+}
+
+bool random4096Test()
+{
+	return randomTestInternal(4096);
+}
+
+bool random262144Test()
+{
+	return randomTestInternal(262144);
+}
+
+bool random16777216Test()
+{
+	return randomTestInternal(16777216);
+}
+
+bool random1073741824Test()
+{
+	return randomTestInternal(1073741824);
 }
 
 TEST(BasicUseCaseTest, Reserve64Test) {
@@ -353,5 +428,30 @@ TEST(BasicUseCaseTest, OddReserve16777216Test) {
 
 TEST(BasicUseCaseTest, OddReserve1073741824Test) {
 	EXPECT_EQ(true, oddReserve1073741824Test());
+	EXPECT_TRUE(true);
+}
+
+TEST(BasicUseCaseTest, Random64Test) {
+	EXPECT_EQ(true, random64Test());
+	EXPECT_TRUE(true);
+}
+
+TEST(BasicUseCaseTest, Random4096Test) {
+	EXPECT_EQ(true, random4096Test());
+	EXPECT_TRUE(true);
+}
+
+TEST(BasicUseCaseTest, Random262144Test) {
+	EXPECT_EQ(true, random262144Test());
+	EXPECT_TRUE(true);
+}
+
+TEST(BasicUseCaseTest, Random16777216Test) {
+	EXPECT_EQ(true, random16777216Test());
+	EXPECT_TRUE(true);
+}
+
+TEST(BasicUseCaseTest, Random1073741824Test) {
+	EXPECT_EQ(true, random1073741824Test());
 	EXPECT_TRUE(true);
 }
