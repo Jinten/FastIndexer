@@ -47,17 +47,6 @@ bool assign16777216Test()
 	return assignTestInternal(16777216);
 }
 
-bool assign1073741824Test()
-{
-	if (MaxExponent < 5)
-	{
-		std::cout << "MaxExponent requires as setting of 5 or higher. MaxExponent = " << MaxExponent << std::endl;
-		return false;
-	}
-
-	return assignTestInternal(1073741824);
-}
-
 bool releaseSimpleTest()
 {
 	for (u32 i = 0; i < MaxExponent; ++i)
@@ -128,16 +117,6 @@ bool release16777216Test()
 	return releaseTestInternal(16777216);
 }
 
-bool release1073741824Test()
-{
-	if (MaxExponent < 5)
-	{
-		std::cout << "MaxExponent requires as setting of 5 or higher. MaxExponent = " << MaxExponent << std::endl;
-		return false;
-	}
-	return releaseTestInternal(1073741824);
-}
-
 bool evenAssignTestInternal(const u32 n)
 {
 	const u32 init = (u32)(std::log(n) / std::log(64)) - 1;
@@ -195,16 +174,6 @@ bool evenAssign16777216Test()
 	return evenAssignTestInternal(16777216);
 }
 
-bool evenAssign1073741824Test()
-{
-	if (MaxExponent < 5)
-	{
-		std::cout << "MaxExponent requires as setting of 5 or higher. MaxExponent = " << MaxExponent << std::endl;
-		return false;
-	}
-	return evenAssignTestInternal(1073741824);
-}
-
 bool oddAssignTestInternal(const u32 n)
 {
 	const u32 init = (u32)(std::log(n) / std::log(64)) - 1;
@@ -260,16 +229,6 @@ bool oddAssign262144Test()
 bool oddAssign16777216Test()
 {
 	return oddAssignTestInternal(16777216);
-}
-
-bool oddAssign1073741824Test()
-{
-	if (MaxExponent < 5)
-	{
-		std::cout << "MaxExponent requires as setting of 5 or higher. MaxExponent = " << MaxExponent << std::endl;
-		return false;
-	}
-	return oddAssignTestInternal(1073741824);
 }
 
 bool randomTestInternal(const u32 n)
@@ -342,39 +301,352 @@ bool random16777216Test()
 	return randomTestInternal(16777216);
 }
 
-bool random1073741824Test()
+bool parallelAssignTestInternal(const u32 n)
 {
-	if (MaxExponent < 5)
+	const u32 init = (u32)(std::log(n) / std::log(64)) - 1;
+
+	for (u32 i = init; i < MaxExponent; ++i)
 	{
-		std::cout << "MaxExponent requires as setting of 5 or higher. MaxExponent = " << MaxExponent << std::endl;
-		return false;
+		FastIndexer indexer(i);
+		HANDLE eventHandle = CreateEvent(nullptr, true, false, L"PARALLEL_TEST_EVENT");
+		std::cout << "exponent = " << i << ", size = " << sizeof(indexer) + indexer.size() << std::endl;
+
+		u32 counter = 0;
+		u32* indexes = new u32[n];
+
+		auto parallelAssign = [&]()
+		{
+			WaitForSingleObject(eventHandle, INFINITE);
+
+			while (true)
+			{
+				const u32 index = InterlockedIncrement(&counter);
+				if (index >= n)
+				{
+					break;
+				}
+				indexes[index] = indexer.assign();
+			}
+		};
+
+		const auto nThreads = std::thread::hardware_concurrency();
+		std::thread** threads = (std::thread**)alloca(sizeof(std::thread*) * nThreads);
+		for (u32 j = 0; j < nThreads; ++j)
+		{
+			threads[j] = new std::thread(parallelAssign);
+		}
+
+		Sleep(1); // wait for preparing all thread just in case.
+
+		SetEvent(eventHandle);
+
+		for (u32 j = 0; j < nThreads; ++j)
+		{
+			threads[j]->join();
+			delete threads[j];
+		}
+
+		bool result = true;
+
+		auto checkConsistency = [&]()
+		{
+			WaitForSingleObject(eventHandle, INFINITE);
+			const u32 MaxLoopCount = min(n, 4096);
+
+			while (result)
+			{
+				const u32 index = InterlockedIncrement(&counter);
+				if (index >= MaxLoopCount)
+				{
+					break;
+				}
+
+				const u32 checkIndex = indexes[index];
+				for (u32 j = index + 1; j < MaxLoopCount; ++j)
+				{
+					if (checkIndex == indexes[j])
+					{
+						result = false;
+						return;
+					}
+				}
+			}
+		};
+
+		counter = 0;
+		ResetEvent(eventHandle);
+
+		for (u32 j = 0; j < nThreads; ++j)
+		{
+			threads[j] = new std::thread(checkConsistency);
+		}
+
+		Sleep(1); // wait for preparing all thread just in case.
+
+		SetEvent(eventHandle);
+
+		for (u32 j = 0; j < nThreads; ++j)
+		{
+			threads[j]->join();
+			delete threads[j];
+		}
+
+		delete[] indexes;
+		CloseHandle(eventHandle);
+
+		if (result == false)
+		{
+			return false;
+		}
 	}
-	return randomTestInternal(1073741824);
+
+	return true;
 }
 
-TEST(BasicUseCaseTest, Assign64Test) 
+bool parallelAssign64Test()
+{
+	return parallelAssignTestInternal(64);
+}
+
+bool parallelAssign4096Test()
+{
+	return parallelAssignTestInternal(4096);
+}
+
+bool parallelAssign262144Test()
+{
+	return parallelAssignTestInternal(262144);
+}
+
+bool parallelAssign16777216Test()
+{
+	return parallelAssignTestInternal(16777216);
+}
+
+bool parallelAssignAndReleaseTestInternal(const u32 n)
+{
+	const u32 init = (u32)(std::log(n) / std::log(64)) - 1;
+
+	for (u32 i = init; i < MaxExponent; ++i)
+	{
+		FastIndexer indexer(i);
+		HANDLE eventHandle = CreateEvent(nullptr, true, false, L"PARALLEL_TEST_EVENT");
+		std::cout << "exponent = " << i << ", size = " << sizeof(indexer) + indexer.size() << std::endl;
+
+		u32 counter = 0;
+		u32* indexes = new u32[n];
+
+		auto parallelAssign = [&]()
+		{
+			WaitForSingleObject(eventHandle, INFINITE);
+
+			while (true)
+			{
+				const u32 index = InterlockedIncrement(&counter);
+				if (index >= n)
+				{
+					break;
+				}
+				indexes[index] = indexer.assign();
+			}
+		};
+
+		const auto nThreads = std::thread::hardware_concurrency();
+		std::thread** threads = (std::thread**)alloca(sizeof(std::thread*) * nThreads);
+		for (u32 j = 0; j < nThreads; ++j)
+		{
+			threads[j] = new std::thread(parallelAssign);
+		}
+
+		Sleep(1); // wait for preparing all thread just in case.
+
+		SetEvent(eventHandle);
+
+		for (u32 j = 0; j < nThreads; ++j)
+		{
+			threads[j]->join();
+			delete threads[j];
+		}
+
+		bool result = true;
+
+		auto parallelRelease = [&]()
+		{
+			WaitForSingleObject(eventHandle, INFINITE);
+
+			while (true)
+			{
+				const u32 index = InterlockedIncrement(&counter);
+				if (index >= n)
+				{
+					break;
+				}
+				indexer.release(indexes[index]);
+			}
+		};
+
+		counter = 0;
+		ResetEvent(eventHandle);
+
+		for (u32 j = 0; j < nThreads; ++j)
+		{
+			threads[j] = new std::thread(parallelRelease);
+		}
+
+		Sleep(1); // wait for preparing all thread just in case.
+
+		SetEvent(eventHandle);
+
+		for (u32 j = 0; j < nThreads; ++j)
+		{
+			threads[j]->join();
+			delete threads[j];
+		}
+
+		delete[] indexes;
+		CloseHandle(eventHandle);
+
+		if (result == false)
+		{
+			return false;
+		}
+
+		// check bit state.
+		for (u32 j = 0; j < n; ++j)
+		{
+			const u32 index = indexer.assign();
+			if (index != j)
+			{
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+bool parallelAssignAndRelease64Test()
+{
+	return parallelAssignAndReleaseTestInternal(64);
+}
+
+bool parallelAssignAndRelease4096Test()
+{
+	return parallelAssignAndReleaseTestInternal(4096);
+}
+
+bool parallelAssignAndRelease262144Test()
+{
+	return parallelAssignAndReleaseTestInternal(262144);
+}
+
+bool parallelAssignAndRelease16777216Test()
+{
+	return parallelAssignAndReleaseTestInternal(16777216);
+}
+
+bool parallelAssignAndReleaseSimultaneouslyTestInternal(const u32 n)
+{
+	const u32 init = (u32)(std::log(n) / std::log(64)) - 1;
+
+	for (u32 i = init; i < MaxExponent; ++i)
+	{
+		FastIndexer indexer(i);
+		HANDLE eventHandle = CreateEvent(nullptr, true, false, L"PARALLEL_TEST_EVENT");
+		std::cout << "exponent = " << i << ", size = " << sizeof(indexer) + indexer.size() << std::endl;
+
+		const auto nThreads = std::thread::hardware_concurrency();
+
+		auto parallelAssignAndRelease = [&]()
+		{
+			WaitForSingleObject(eventHandle, INFINITE);
+
+			const u32 local_n = n / nThreads;
+			u32* indexes = new u32[local_n];
+
+			for (u32 j = 0; j < local_n; ++j)
+			{
+				indexes[j] = indexer.assign();
+			}
+
+			for (u32 j = 0; j < local_n; ++j)
+			{
+				indexer.release(indexes[j]);
+			}
+
+			delete[] indexes;
+		};
+
+		std::thread** threads = (std::thread**)alloca(sizeof(std::thread*) * nThreads);
+		for (u32 j = 0; j < nThreads; ++j)
+		{
+			threads[j] = new std::thread(parallelAssignAndRelease);
+		}
+
+		Sleep(1); // wait for preparing all thread just in case.
+
+		SetEvent(eventHandle);
+
+		for (u32 j = 0; j < nThreads; ++j)
+		{
+			threads[j]->join();
+			delete threads[j];
+		}
+
+		CloseHandle(eventHandle);
+
+		// check bit state.
+		for (u32 j = 0; j < n; ++j)
+		{
+			const u32 index = indexer.assign();
+			if (index != j)
+			{
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+bool parallelAssignAndReleaseSimultaneously64Test()
+{
+	return parallelAssignAndReleaseSimultaneouslyTestInternal(64);
+}
+
+bool parallelAssignAndReleaseSimultaneously4096Test()
+{
+	return parallelAssignAndReleaseSimultaneouslyTestInternal(4096);
+}
+
+bool parallelAssignAndReleaseSimultaneously262144Test()
+{
+	return parallelAssignAndReleaseSimultaneouslyTestInternal(262144);
+}
+
+bool parallelAssignAndReleaseSimultaneously16777216Test()
+{
+	return parallelAssignAndReleaseSimultaneouslyTestInternal(16777216);
+}
+
+TEST(BasicUseCaseTest, Assign64Test)
 {
 	EXPECT_EQ(true, assign64Test());
 }
 
-TEST(BasicUseCaseTest, Assign4096Test) 
+TEST(BasicUseCaseTest, Assign4096Test)
 {
 	EXPECT_EQ(true, assign4096Test());
 }
 
-TEST(BasicUseCaseTest, Assign262144Test) 
+TEST(BasicUseCaseTest, Assign262144Test)
 {
 	EXPECT_EQ(true, assign262144Test());
 }
 
-TEST(BasicUseCaseTest, Assign16777216Test) 
+TEST(BasicUseCaseTest, Assign16777216Test)
 {
 	EXPECT_EQ(true, assign16777216Test());
-}
-
-TEST(BasicUseCaseTest, Assign1073741824Test)
-{
-	EXPECT_EQ(true, assign1073741824Test());
 }
 
 TEST(BasicUseCaseTest, ReleaseSimpleTest)
@@ -402,11 +674,6 @@ TEST(BasicUseCaseTest, Release16777216Test)
 	EXPECT_EQ(true, release16777216Test());
 }
 
-TEST(BasicUseCaseTest, Release1073741824Test)
-{
-	EXPECT_EQ(true, release1073741824Test());
-}
-
 TEST(BasicUseCaseTest, EvenAssign64Test)
 {
 	EXPECT_EQ(true, evenAssign64Test());
@@ -425,11 +692,6 @@ TEST(BasicUseCaseTest, EvenAssign262144Test)
 TEST(BasicUseCaseTest, EvenAssign16777216Test)
 {
 	EXPECT_EQ(true, evenAssign16777216Test());
-}
-
-TEST(BasicUseCaseTest, EvenAssign1073741824Test)
-{
-	EXPECT_EQ(true, evenAssign1073741824Test());
 }
 
 TEST(BasicUseCaseTest, OddAssign64Test)
@@ -452,32 +714,82 @@ TEST(BasicUseCaseTest, OddAssign16777216Test)
 	EXPECT_EQ(true, oddAssign16777216Test());
 }
 
-TEST(BasicUseCaseTest, OddAssign1073741824Test)
-{
-	EXPECT_EQ(true, oddAssign1073741824Test());
-}
-
-TEST(BasicUseCaseTest, Random64Test)
+TEST(RandomTest, Random64Test)
 {
 	EXPECT_EQ(true, random64Test());
 }
 
-TEST(BasicUseCaseTest, Random4096Test)
+TEST(RandomTest, Random4096Test)
 {
 	EXPECT_EQ(true, random4096Test());
 }
 
-TEST(BasicUseCaseTest, Random262144Test)
+TEST(RandomTest, Random262144Test)
 {
 	EXPECT_EQ(true, random262144Test());
 }
 
-TEST(BasicUseCaseTest, Random16777216Test)
+TEST(RandomTest, Random16777216Test)
 {
 	EXPECT_EQ(true, random16777216Test());
 }
 
-TEST(BasicUseCaseTest, Random1073741824Test)
+TEST(ParallelTest , ParallelAssign64Test)
 {
-	EXPECT_EQ(true, random1073741824Test());
+	EXPECT_EQ(true, parallelAssign64Test());
+}
+
+TEST(ParallelTest, ParallelAssign4096Test)
+{
+	EXPECT_EQ(true, parallelAssign4096Test());
+}
+
+TEST(ParallelTest, ParallelAssign262144Test)
+{
+	EXPECT_EQ(true, parallelAssign262144Test());
+}
+
+TEST(ParallelTest, ParallelAssign16777216Test)
+{
+	EXPECT_EQ(true, parallelAssign16777216Test());
+}
+
+TEST(ParallelTest, ParallelAssignAndRelease64Test)
+{
+	EXPECT_EQ(true, parallelAssignAndRelease64Test());
+}
+
+TEST(ParallelTest, ParallelAssignAndRelease4096Test)
+{
+	EXPECT_EQ(true, parallelAssignAndRelease4096Test());
+}
+
+TEST(ParallelTest, ParallelAssignAndRelease262144Test)
+{
+	EXPECT_EQ(true, parallelAssignAndRelease262144Test());
+}
+
+TEST(ParallelTest, ParallelAssignAndRelease16777216Test)
+{
+	EXPECT_EQ(true, parallelAssignAndRelease16777216Test());
+}
+
+TEST(ParallelTest, ParallelAssignAndReleaseSimultaneously64Test)
+{
+	EXPECT_EQ(true, parallelAssignAndReleaseSimultaneously64Test());
+}
+
+TEST(ParallelTest, ParallelAssignAndReleaseSimultaneously4096Test)
+{
+	EXPECT_EQ(true, parallelAssignAndReleaseSimultaneously4096Test());
+}
+
+TEST(ParallelTest, ParallelAssignAndReleaseSimultaneously262144Test)
+{
+	EXPECT_EQ(true, parallelAssignAndReleaseSimultaneously262144Test());
+}
+
+TEST(ParallelTest, ParallelAssignAndReleaseSimultaneously16777216Test)
+{
+	EXPECT_EQ(true, parallelAssignAndReleaseSimultaneously16777216Test());
 }

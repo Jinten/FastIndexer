@@ -7,4 +7,5 @@
 
 #include "gtest/gtest.h"
 #include <iostream>
+#include <thread>
 #include "../FastIndexer/fastIndexer.h"

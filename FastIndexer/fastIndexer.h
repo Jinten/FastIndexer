@@ -120,10 +120,10 @@ namespace ao
 				}
 				else
 				{
-					destIndex = bitScanForward(src);
+					const u64 binIndex = bitScanForward(src);
 
-					const u64 nextBufIndex = bufOffset + destIndex;
-					const u64 nextBufOffset = (u64(64) << (6 * expIndex)) * (destIndex + 1);
+					const u64 nextBufIndex = bufOffset + binIndex;
+					const u64 nextBufOffset = (u64(64) << (6 * expIndex)) * (binIndex + 1);
 
 					u64 index;
 					const ResultType result = assignInternal(index, expIndex + 1, nextBufIndex, bufOffset + nextBufOffset);
@@ -132,14 +132,12 @@ namespace ao
 					{
 					case ResultType::Success:
 					{
-						destIndex = (destIndex << (6 * (mExponent - expIndex))) + index;
+						destIndex = (binIndex << (6 * (mExponent - expIndex))) + index;
 						return ResultType::Success;
 					}
 					case ResultType::Full:
 					{
-						const u64 binIndex = destIndex;
-
-						destIndex = (destIndex << (6 * (mExponent - expIndex))) + index;
+						destIndex = (binIndex << (6 * (mExponent - expIndex))) + index;
 
 						while (true)
 						{
@@ -164,30 +162,7 @@ namespace ao
 						break;
 					}
 					case ResultType::Retry:
-						// child bit area was full, so need to retry from parent bit area to next child bit area.
-						while (true)
-						{
-							src = mBuffer[bufIndex];
-
-							const u64 mask = src & (~(u64(1) << destIndex));
-							const u64 result = InterlockedCompareExchange64((long long*)&mBuffer[bufIndex], mask, src);
-
-							if (result == src)
-							{
-								// succeed
-								// retry to reserve to child bit area.
-								break;
-							}
-
-							if (result != 0)
-							{
-								// this bit area is not full already.
-								// retry to reserve to child bit area.
-								break;
-							}
-
-							// other thread released bit. so need to retry.
-						}
+						// child bit area was full, so need to retry from parent bit area.
 						break;
 					}
 				}
@@ -218,13 +193,10 @@ namespace ao
 				else
 				{
 					const u64 binIndex = (index / (u64(1) << (6 * (mExponent - expIndex)))) % 64;
-					const u64 nextBufIndex = bufOffset + binIndex;
-					const u64 nextBufOffset = (u64(64) << (6 * expIndex)) * (binIndex + 1);
-
-					releaseInternal(index, expIndex + 1, nextBufIndex, bufOffset + nextBufOffset);
 
 					const u64 bin = u64(1) << binIndex;
 
+					// enable parent bit first for to be lockfree.
 					while (true)
 					{
 						// check current value
@@ -232,7 +204,7 @@ namespace ao
 						if ((src & bin) != 0)
 						{
 							// there is still usable bit or other thread released and modified parent bit already.
-							return;
+							break;
 						}
 						else
 						{
@@ -243,12 +215,20 @@ namespace ao
 							if (result == src)
 							{
 								// succeed
-								return;
+								break;
 							}
 						}
 
 						// other thread modified binary. so need to retry.
 					}
+
+					// release child bit.
+					const u64 nextBufIndex = bufOffset + binIndex;
+					const u64 nextBufOffset = (u64(64) << (6 * expIndex)) * (binIndex + 1);
+
+					releaseInternal(index, expIndex + 1, nextBufIndex, bufOffset + nextBufOffset);
+					
+					return;
 				}
 			}
 		}
